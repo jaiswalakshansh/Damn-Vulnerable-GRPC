@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package dvgrpc;
+
+// ============================================================
+// ProductService - Vulnerabilities:
+//   [VULN-3] SQL Injection: search query directly interpolated
+//   [VULN-3] Debug field leaks the raw SQL query to client
+// ============================================================
+
+service ProductService {
+  rpc SearchProducts(SearchRequest) returns (SearchResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc AddProduct(AddProductRequest) returns (AddProductResponse);
+}
+
+// VULNERABILITY [VULN-3]: 'query' is used directly in SQL string formatting.
+// Payload: ' UNION SELECT id,flag,challenge,1.0,'' FROM flags--
+message SearchRequest {
+  string query = 1;    // SQL injectable
+  string category = 2;
+  int32 limit = 3;
+}
+
+message SearchResponse {
+  repeated Product products = 1;
+  string debug_query = 2; // VULNERABILITY: Leaks the raw SQL to the client
+  int32 count = 3;
+}
+
+message Product {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+  float price = 4;
+  string category = 5;
+}
+
+message GetProductRequest {
+  int32 product_id = 1;
+}
+
+message GetProductResponse {
+  Product product = 1;
+  bool found = 2;
+}
+
+message AddProductRequest {
+  string name = 1;
+  string description = 2;
+  float price = 3;
+  string category = 4;
+}
+
+message AddProductResponse {
+  bool success = 1;
+  int32 product_id = 2;
+  string message = 3;
+}

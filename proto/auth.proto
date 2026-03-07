@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package dvgrpc;
+
+// ============================================================
+// AuthService - Vulnerabilities:
+//   [VULN-8]  Mass Assignment: 'role' field accepted from user
+//   [VULN-4]  JWT Algorithm Confusion: public key exposed
+//   [VULN-10] Hardcoded credentials: admin:admin123
+// ============================================================
+
+service AuthService {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse);
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  bool success = 1;
+  string token = 2;
+  string message = 3;
+  string role = 4;
+}
+
+// VULNERABILITY [VULN-8]: 'role' is a hidden field that the server
+// blindly trusts. Send role="admin" to elevate privileges.
+message RegisterRequest {
+  string username = 1;
+  string password = 2;
+  string email = 3;
+  string role = 4; // Hidden field - mass assignment vulnerability
+}
+
+message RegisterResponse {
+  bool success = 1;
+  int32 user_id = 2;
+  string message = 3;
+}
+
+// VULNERABILITY [VULN-4]: Exposes RSA public key used in JWT verification.
+// Attacker can forge HS256 tokens using the public key as the HMAC secret.
+message GetPublicKeyRequest {}
+
+message GetPublicKeyResponse {
+  string public_key = 1;
+  string algorithm = 2;
+  string hint = 3;
+}
+
+message WhoAmIRequest {
+  string token = 1;
+}
+
+message WhoAmIResponse {
+  string username = 1;
+  string role = 2;
+  int32 user_id = 3;
+}

@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package dvgrpc;
+
+// ============================================================
+// FileService - Vulnerabilities:
+//   [VULN-6] Path Traversal: filename not sanitized
+//   [VULN-6] Directory listing: directory path not restricted
+// ============================================================
+
+service FileService {
+  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse);
+  rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
+}
+
+// VULNERABILITY [VULN-6]: filename is joined with base dir but not normalized.
+// Payload: filename = "../../../../etc/passwd"
+// Or:      filename = "../../../../app/secret/flag.txt"
+message ReadFileRequest {
+  string filename = 1; // Path traversal vulnerability
+}
+
+message ReadFileResponse {
+  string content = 1;
+  string resolved_path = 2; // Also leaks the resolved path!
+  int64 size = 3;
+}
+
+// VULNERABILITY [VULN-6b]: directory listing with path traversal
+message ListFilesRequest {
+  string directory = 1;
+}
+
+message ListFilesResponse {
+  repeated string files = 1;
+  string base_dir = 2; // Leaks the server base directory
+}
+
+message WriteFileRequest {
+  string filename = 1;
+  string content = 2;
+}
+
+message WriteFileResponse {
+  bool success = 1;
+  string message = 2;
+}

@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package dvgrpc;
+
+// ============================================================
+// CryptoService - Vulnerabilities:
+//   [BONUS-1] Weak encryption: ECB mode, hardcoded IV
+//   [BONUS-2] Hash length extension: MD5/SHA1 with secret prefix
+//   [BONUS-3] Padding oracle via verbose error messages
+// ============================================================
+
+service CryptoService {
+  rpc Encrypt(EncryptRequest) returns (EncryptResponse);
+  rpc Decrypt(DecryptRequest) returns (DecryptResponse);
+  rpc HashData(HashRequest) returns (HashResponse);
+  rpc VerifySignature(VerifySignatureRequest) returns (VerifySignatureResponse);
+}
+
+// VULNERABILITY [BONUS-1]: AES-ECB mode used (no IV, block patterns visible)
+// Also: key is hardcoded as "1234567890abcdef"
+message EncryptRequest {
+  string plaintext = 1;
+  string algorithm = 2; // "AES-ECB", "AES-CBC" (CBC has hardcoded IV)
+}
+
+message EncryptResponse {
+  string ciphertext_hex = 1;
+  string algorithm = 2;
+  string iv_hex = 3; // Leaks IV (hardcoded "0000000000000000")
+}
+
+// VULNERABILITY [BONUS-2]: Decryption errors reveal padding status
+// Classic padding oracle attack surface
+message DecryptRequest {
+  string ciphertext_hex = 1;
+  string algorithm = 2;
+  string iv_hex = 3;
+}
+
+message DecryptResponse {
+  string plaintext = 1;
+  bool success = 2;
+  string error = 3; // Verbose padding errors - oracle vulnerability
+}
+
+// VULNERABILITY [BONUS-3]: HMAC uses weak MD5 and secret prefix is guessable
+// secret_prefix = "dvgrpc_secret_" + 4 random chars (seeded)
+message HashRequest {
+  string data = 1;
+  string algorithm = 2; // "md5", "sha1", "sha256"
+}
+
+message HashResponse {
+  string hash = 1;
+  string algorithm = 2;
+}
+
+message VerifySignatureRequest {
+  string data = 1;
+  string signature = 2;
+  string algorithm = 3;
+}
+
+message VerifySignatureResponse {
+  bool valid = 1;
+  string flag = 2; // Flag revealed if you forge a valid signature
+}

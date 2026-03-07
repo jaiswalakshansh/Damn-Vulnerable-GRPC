@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package dvgrpc;
+
+// ============================================================
+// UserService - Vulnerabilities:
+//   [VULN-5] IDOR: GetProfile/GetNote don't validate ownership
+// ============================================================
+
+service UserService {
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
+}
+
+// VULNERABILITY [VULN-5]: No check that user_id matches the authenticated user.
+// user_id=1 is always the admin and contains a flag in the 'secret' field.
+message GetProfileRequest {
+  int32 user_id = 1;
+}
+
+message GetProfileResponse {
+  int32 user_id = 1;
+  string username = 2;
+  string email = 3;
+  string role = 4;
+  string bio = 5;
+  string secret = 6; // Admin has a flag here
+}
+
+message UpdateProfileRequest {
+  string bio = 1;
+}
+
+message UpdateProfileResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message ListUsersResponse {
+  repeated UserSummary users = 1;
+  int32 total = 2;
+}
+
+message UserSummary {
+  int32 user_id = 1;
+  string username = 2;
+  string role = 3;
+}
+
+// VULNERABILITY [VULN-5b]: Note IDOR - server doesn't verify note ownership.
+// Note id=1 belongs to admin and contains a flag.
+message GetNoteRequest {
+  int32 note_id = 1;
+}
+
+message GetNoteResponse {
+  int32 note_id = 1;
+  string title = 2;
+  string content = 3;
+  string owner = 4;
+  bool is_private = 5;
+}
+
+message CreateNoteRequest {
+  string title = 1;
+  string content = 2;
+}
+
+message CreateNoteResponse {
+  bool success = 1;
+  int32 note_id = 2;
+}

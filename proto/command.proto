@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package dvgrpc;
+
+// ============================================================
+// CommandService - Vulnerabilities:
+//   [VULN-7] Command Injection: user input passed to shell
+// ============================================================
+
+service CommandService {
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc Nslookup(NslookupRequest) returns (NslookupResponse);
+  rpc Traceroute(TracerouteRequest) returns (TracerouteResponse);
+  rpc Whois(WhoisRequest) returns (WhoisResponse);
+}
+
+// VULNERABILITY [VULN-7]: host is passed directly to shell
+// Payload: host = "127.0.0.1; cat /app/secret/cmd_flag.txt"
+// Payload: host = "$(cat /app/secret/cmd_flag.txt)"
+// Payload: host = "127.0.0.1 && id && whoami"
+message PingRequest {
+  string host = 1;  // Command injection
+  int32 count = 2;
+}
+
+message PingResponse {
+  string output = 1;
+  int32 return_code = 2;
+  string command = 3; // Also leaks the actual command run
+}
+
+// VULNERABILITY [VULN-7b]: domain passed to nslookup without sanitization
+message NslookupRequest {
+  string domain = 1; // Command injection
+}
+
+message NslookupResponse {
+  string output = 1;
+  int32 return_code = 2;
+}
+
+// VULNERABILITY [VULN-7c]: traceroute command injection
+message TracerouteRequest {
+  string host = 1; // Command injection
+}
+
+message TracerouteResponse {
+  string output = 1;
+  int32 return_code = 2;
+}
+
+message WhoisRequest {
+  string domain = 1; // Command injection
+}
+
+message WhoisResponse {
+  string output = 1;
+}

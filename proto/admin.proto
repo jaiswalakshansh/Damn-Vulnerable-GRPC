@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package dvgrpc;
+
+// ============================================================
+// AdminService - Vulnerabilities:
+//   [VULN-2] Missing authentication: all RPCs are unprotected
+//   [VULN-2] Information disclosure: system info leaks secrets
+// ============================================================
+
+service AdminService {
+  // VULNERABILITY [VULN-2]: No authentication enforced on any of these
+  rpc GetFlag(GetFlagRequest) returns (GetFlagResponse);
+  rpc GetSystemInfo(GetSystemInfoRequest) returns (GetSystemInfoResponse);
+  rpc ListAllFlags(ListAllFlagsRequest) returns (ListAllFlagsResponse);
+  rpc ExecuteRawQuery(ExecuteRawQueryRequest) returns (ExecuteRawQueryResponse);
+}
+
+message GetFlagRequest {
+  string challenge = 1; // e.g. "unauthenticated_admin"
+}
+
+message GetFlagResponse {
+  string flag = 1;
+  string message = 2;
+}
+
+// VULNERABILITY: Returns internal config values including the JWT secret key
+message GetSystemInfoRequest {}
+
+message GetSystemInfoResponse {
+  string hostname = 1;
+  string os_info = 2;
+  string python_version = 3;
+  string db_path = 4;
+  string jwt_secret = 5; // Leaks the HS256 signing key!
+  string server_version = 6;
+}
+
+message ListAllFlagsRequest {}
+
+message ListAllFlagsResponse {
+  repeated FlagEntry flags = 1;
+}
+
+message FlagEntry {
+  string challenge = 1;
+  string flag = 2;
+  string hint = 3;
+}
+
+// VULNERABILITY: Raw SQL execution, no auth, accessible to everyone
+message ExecuteRawQueryRequest {
+  string sql = 1;
+}
+
+message ExecuteRawQueryResponse {
+  repeated string rows = 1;
+  string error = 2;
+}

@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  dvgrpc:
+    build: .
+    container_name: dvgrpc
+    ports:
+      - "50051:50051"
+    volumes:
+      # Persist database and keys across restarts
+      - dvgrpc_data:/app/data
+      - dvgrpc_keys:/app/keys
+    environment:
+      - PORT=50051
+      - DB_PATH=/app/data/dvgrpc.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import grpc; ch=grpc.insecure_channel('localhost:50051'); grpc.channel_ready_future(ch).result(timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  dvgrpc_data:
+  dvgrpc_keys:
