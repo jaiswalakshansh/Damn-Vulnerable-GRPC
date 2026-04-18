@@ -6,6 +6,59 @@ follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 
 ---
 
+## [1.2.0] — 2026-04-18
+
+### Added — new challenge
+- **Challenge 13 — Integer Overflow / Unvalidated Pagination.** New
+  `ProductService.PaginatedSearch` RPC trusts `int32 per_page` and
+  `int32 page` verbatim. Negative `per_page` → SQLite `LIMIT -1` →
+  full-table dump (including a hidden "premium" product containing the
+  flag). Full README + working exploit script + regression test.
+
+### Added — observability (opt-in)
+- **`server/interceptors/metrics_interceptor.py`** — gRPC interceptor
+  tracking per-method calls, errors, and latencies; emits Prometheus
+  text format via a small HTTP sidecar on `DVGRPC_METRICS_PORT`.
+- `/metrics` and `/healthz` endpoints.
+- No new runtime dependencies.
+
+### Added — automation
+- **`scripts/selfcheck.py`** — probes every intentional vulnerability
+  end-to-end, prints a pass/fail table, and can auto-update the local
+  scoreboard file.
+- **`make solve-all`** runs every exploit in sequence.
+- **`make selfcheck`** convenience wrapper for the script above.
+- **`make healthcheck`** convenience wrapper.
+
+### Added — supply chain & release
+- **`.github/workflows/release.yml`** publishes multi-arch (amd64 +
+  arm64) images to `ghcr.io/<owner>/dvgrpc:{latest,vX.Y.Z}` on tags,
+  with provenance and SBOM attestations.
+- **`.pre-commit-config.yaml`** with ruff, black, gitleaks, and the
+  usual hygiene hooks.
+- **`.gitleaks.toml`** allowlists the intentional weak secrets so
+  gitleaks raises noise *only* for regressions.
+
+### Added — CI coverage for features
+- New CI job `feature-scripts` that verifies `make help`,
+  `scripts/scoreboard.py --json/--reset`, `scripts/healthcheck.py`,
+  proto compilation via Makefile, and `scripts/selfcheck.py` against a
+  live server — plus `curl /metrics` to confirm the sidecar.
+- New CI job `exploits-compile` that `compileall`s every exploit and
+  script.
+- New test module `tests/test_features.py` exercising the scoreboard,
+  healthcheck, selfcheck, env overrides, metrics interceptor + HTTP
+  sidecar, exploit script imports, challenge-dir mappings, and the
+  Makefile help output.
+
+### Changed
+- `tests/test_challenges.py`: added Challenge-13 regression test.
+- `scripts/scoreboard.py` catalogue gains Challenge 13 entry.
+- `challenges/README.md`, main `README.md`, and `docs/SOLUTIONS.md`
+  updated for Challenge 13 and the metrics feature.
+
+---
+
 ## [1.1.0] — 2026-04-18
 
 ### Added — new challenges

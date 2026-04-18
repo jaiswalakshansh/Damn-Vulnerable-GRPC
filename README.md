@@ -9,7 +9,7 @@
 [![CodeQL](https://github.com/jaiswalakshansh/Damn-Vulnerable-GRPC/actions/workflows/codeql.yml/badge.svg)](https://github.com/jaiswalakshansh/Damn-Vulnerable-GRPC/actions/workflows/codeql.yml)
 ![Python 3.10 | 3.11 | 3.12](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Challenges: 14](https://img.shields.io/badge/challenges-14-purple)
+![Challenges: 15](https://img.shields.io/badge/challenges-15-purple)
 
 ---
 
@@ -52,6 +52,7 @@ the public internet.
 | 10  | [Hardcoded Credentials](challenges/10-hardcoded-credentials/)      | Misconfiguration     | 🟢 Easy    |
 | 11  | [Timing Attack](challenges/11-timing-attack/) ✨                    | Info Disclosure      | 🔴 Hard    |
 | 12  | [Streaming DoS](challenges/12-streaming-dos/) ✨                    | Availability         | 🟡 Medium  |
+| 13  | [Integer Overflow / Unvalidated Pagination](challenges/13-integer-overflow/) ✨ | Injection / BAC | 🟡 Medium  |
 | B1  | [Weak Crypto (ECB)](challenges/bonus-crypto/)                      | Crypto Failures      | 🔴 Hard    |
 | B2  | [HMAC Forgery](challenges/bonus-crypto/)                           | Crypto Failures      | 🔴 Hard    |
 
@@ -125,10 +126,26 @@ your PATH. The `Makefile` wires everything together:
 make help                      # list every target
 make enumerate                 # grpcurl list against localhost:50051
 make exploit N=01              # run client/exploits/exploit_01_*.py
+make solve-all                 # run every exploit in sequence
+make selfcheck                 # verify every challenge still works
 make test                      # run the regression suite
 make scoreboard                # interactive progress tracker
 make reset-db                  # wipe and re-seed the local sqlite db
 ```
+
+### Observability (opt-in)
+
+DVGRPC ships with an optional Prometheus-compatible metrics sidecar — off
+by default so the app mirrors a real "shipped without observability"
+service.  Flip it on with one env var:
+
+```bash
+DVGRPC_METRICS_PORT=9090 make run
+curl -s localhost:9090/metrics
+```
+
+Ready-made labels: `method`, `status`. Great for showing learners how an
+attack looks from SRE-land.
 
 Want a GUI?  [grpcui](https://github.com/fullstorydev/grpcui) works
 out of the box:

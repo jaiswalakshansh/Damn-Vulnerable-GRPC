@@ -109,6 +109,58 @@ class ProductServiceServicer(product_pb2_grpc.ProductServiceServicer):
         )
         return product_pb2.GetProductResponse(product=product, found=True)
 
+    def PaginatedSearch(self, request, context):
+        """
+        VULNERABILITY [VULN-13]: Unvalidated integer pagination.
+
+        SQLite interprets ``LIMIT -1`` as "no limit" and ignores negative
+        ``OFFSET``. The server trusts the client-supplied ``per_page`` and
+        ``page`` fields verbatim, so an attacker can dump the entire table —
+        including items the UI intended to hide behind later pages
+        (e.g. the unreleased "premium" product whose name contains the flag).
+
+        Exploit: PaginatedSearchRequest(query="", page=0, per_page=-1)
+
+        Flag: FLAG{int3g3r_b0unds_n0t_v4l1d4t3d}
+        """
+        q        = request.query or ""
+        page     = request.page               # NOT validated
+        per_page = request.per_page if request.per_page else 5   # default
+
+        # VULNERABILITY: no bounds check; negative per_page → LIMIT -1 → dump all
+        offset = page * per_page
+        sql = (
+            "SELECT id, name, description, price, category "
+            "FROM products "
+            "WHERE name LIKE ? "
+            "LIMIT ? OFFSET ?"
+        )
+
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(sql, (f"%{q}%", per_page, offset))
+            rows = cursor.fetchall()
+        finally:
+            conn.close()
+
+        products = [
+            product_pb2.Product(
+                id=row["id"],
+                name=row["name"],
+                description=row["description"],
+                price=float(row["price"] or 0),
+                category=row["category"] or "",
+            )
+            for row in rows
+        ]
+        return product_pb2.PaginatedSearchResponse(
+            products=products,
+            total_returned=len(products),
+            page=page,
+            per_page=per_page,
+        )
+
     def AddProduct(self, request, context):
         if not request.name:
             return product_pb2.AddProductResponse(success=False, message="Name is required.")

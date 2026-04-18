@@ -193,9 +193,23 @@ def serve() -> None:
     create_flag_files()
 
     interceptor = AuthInterceptor()
+    interceptors = [interceptor]
+
+    # Opt-in metrics. Set DVGRPC_METRICS_PORT=9090 to enable.
+    metrics_port = int(os.getenv("DVGRPC_METRICS_PORT", "0"))
+    metrics = None
+    if metrics_port:
+        from server.interceptors.metrics_interceptor import (
+            MetricsInterceptor, start_metrics_http_server,
+        )
+        metrics = MetricsInterceptor()
+        interceptors.append(metrics)
+        start_metrics_http_server(metrics, metrics_port)
+        log.info("Metrics sidecar listening on :%d/metrics", metrics_port)
+
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=10),
-        interceptors=[interceptor],
+        interceptors=interceptors,
     )
 
     # Register all services

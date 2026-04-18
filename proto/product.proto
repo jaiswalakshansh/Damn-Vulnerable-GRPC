@@ -12,6 +12,11 @@ service ProductService {
   rpc SearchProducts(SearchRequest) returns (SearchResponse);
   rpc GetProduct(GetProductRequest) returns (GetProductResponse);
   rpc AddProduct(AddProductRequest) returns (AddProductResponse);
+
+  // [VULN-13] Paginated search with unvalidated integer bounds.
+  // Negative `per_page` lets SQLite treat -1 as "no limit" and dump the table.
+  // Negative `page` → negative OFFSET → SQLite ignores it (no error, still dumps).
+  rpc PaginatedSearch(PaginatedSearchRequest) returns (PaginatedSearchResponse);
 }
 
 // VULNERABILITY [VULN-3]: 'query' is used directly in SQL string formatting.
@@ -56,4 +61,20 @@ message AddProductResponse {
   bool success = 1;
   int32 product_id = 2;
   string message = 3;
+}
+
+// VULNERABILITY [VULN-13]: Integer overflow / unvalidated pagination bounds.
+// The client controls both `page` and `per_page`. The server never checks
+// that they are non-negative — send per_page = -1 to bypass the LIMIT.
+message PaginatedSearchRequest {
+  string query    = 1;
+  int32  page     = 2; // 0-indexed
+  int32  per_page = 3; // NOT validated — negative values bypass LIMIT
+}
+
+message PaginatedSearchResponse {
+  repeated Product products = 1;
+  int32 total_returned       = 2;
+  int32 page                 = 3;
+  int32 per_page             = 4;
 }

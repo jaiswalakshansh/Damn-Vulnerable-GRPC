@@ -66,6 +66,8 @@ CHALLENGES: list[Challenge] = [
               "FLAG{t1m1ng_4tt4ck_us3r_3num3r4t10n}"),
     Challenge("streaming_dos",         "12", "Streaming DoS",          "Availability / DoS",    "medium",
               "FLAG{unb0und3d_str34m_3xh4usts_th3_s3rv3r}"),
+    Challenge("integer_overflow",      "13", "Integer Overflow",       "Injection / BAC",       "medium",
+              "FLAG{int3g3r_b0unds_n0t_v4l1d4t3d}"),
 ]
 
 VALID_FLAGS = {c.flag: c.key for c in CHALLENGES}

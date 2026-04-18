@@ -108,6 +108,9 @@ def _seed_data(conn: sqlite3.Connection) -> None:
         ("DVGRPC Challenge USB",        "USB drive preloaded with CTF tooling",          49.99, "hardware"),
         ("gRPC Fuzzer Pro",             "Automated gRPC security fuzzing toolkit",        99.99, "software"),
         ("Hack gRPC T-Shirt",           "Show your love for vulnerable gRPC apps",        19.99, "clothing"),
+        # VULNERABILITY [VULN-13]: hidden "premium" item, only reachable by
+        # abusing PaginatedSearch with a negative per_page.
+        ("[PREMIUM] Dev kit",           f"Gated product — {FLAGS['integer_overflow']}",   999.0, "premium"),
     ]
     for name, desc, price, cat in products:
         cursor.execute(

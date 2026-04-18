@@ -101,9 +101,22 @@ format: ## Auto-fix lint + format code
 	black server/ client/ tests/ scripts/
 
 # ------------- utilities -------------
-.PHONY: scoreboard enumerate exploit clean
+.PHONY: scoreboard enumerate exploit solve-all selfcheck healthcheck clean
 scoreboard: ## Launch the interactive challenge tracker
 	$(PYTHON) scripts/scoreboard.py
+
+selfcheck: ## Probe every challenge against a running server
+	DVGRPC_HOST_PORT=$(HOST_PORT) $(PYTHON) scripts/selfcheck.py --update-scoreboard
+
+healthcheck: ## Verify the server is reachable
+	$(PYTHON) scripts/healthcheck.py --host $(HOST_PORT)
+
+solve-all: ## Run every exploit script in sequence (stops on first error)
+	@for f in client/exploits/exploit_*.py; do \
+	  echo ""; echo "$$(printf '=%.0s' $$(seq 1 70))"; echo ">> $$f"; \
+	  echo "$$(printf '=%.0s' $$(seq 1 70))"; \
+	  DVGRPC_HOST_PORT=$(HOST_PORT) $(PYTHON) "$$f" || exit 1; \
+	done
 
 enumerate: ## List services via grpcurl (requires grpcurl on PATH)
 	grpcurl -plaintext $(HOST_PORT) list

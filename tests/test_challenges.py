@@ -171,6 +171,20 @@ def test_hardcoded_admin_login(channel):
     assert resp.success and resp.role == "admin"
 
 
+# ----- Challenge 13 — Integer overflow / unvalidated pagination ------
+def test_paginated_search_negative_per_page_dumps_all(channel):
+    from generated import product_pb2, product_pb2_grpc
+
+    stub = product_pb2_grpc.ProductServiceStub(channel)
+    normal = stub.PaginatedSearch(
+        product_pb2.PaginatedSearchRequest(query="", page=0, per_page=5))
+    all_rows = stub.PaginatedSearch(
+        product_pb2.PaginatedSearchRequest(query="", page=0, per_page=-1))
+    assert all_rows.total_returned > normal.total_returned
+    joined = " ".join(p.description for p in all_rows.products)
+    assert "FLAG{int3g3r_b0unds_n0t_v4l1d4t3d}" in joined
+
+
 # ----- Bonus — ECB block repetition ----------------------------------
 def test_ecb_mode_leaks_repeating_blocks(channel):
     from generated import crypto_pb2, crypto_pb2_grpc

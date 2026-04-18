@@ -79,4 +79,5 @@ FLAGS = {
     "crypto_forge":          "FLAG{s1gn4tur3_f0rg3d_w34k_hmac}",
     "timing_attack":         "FLAG{t1m1ng_4tt4ck_us3r_3num3r4t10n}",
     "streaming_dos":         "FLAG{unb0und3d_str34m_3xh4usts_th3_s3rv3r}",
+    "integer_overflow":      "FLAG{int3g3r_b0unds_n0t_v4l1d4t3d}",
 }
