@@ -6,25 +6,28 @@ Vulnerabilities embedded:
   [VULN-9]  Metadata Bypass — x-internal-service header skips all auth
   [VULN-2]  AdminService is explicitly excluded from auth checks
 """
+
 import grpc
 import jwt as pyjwt
 
 from server.config import (
-    JWT_SECRET,
-    RSA_PUBLIC_KEY_PATH,
     INTERNAL_SERVICE_HEADER,
     INTERNAL_SERVICE_VALUE,
+    JWT_SECRET,
+    RSA_PUBLIC_KEY_PATH,
 )
 
 # Methods that are always accessible without a token
-PUBLIC_METHODS = frozenset([
-    "/dvgrpc.AuthService/Login",
-    "/dvgrpc.AuthService/Register",
-    "/dvgrpc.AuthService/GetPublicKey",
-    # Reflection endpoints
-    "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo",
-    "/grpc.reflection.v1.ServerReflection/ServerReflectionInfo",
-])
+PUBLIC_METHODS = frozenset(
+    [
+        "/dvgrpc.AuthService/Login",
+        "/dvgrpc.AuthService/Register",
+        "/dvgrpc.AuthService/GetPublicKey",
+        # Reflection endpoints
+        "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo",
+        "/grpc.reflection.v1.ServerReflection/ServerReflectionInfo",
+    ]
+)
 
 
 def _load_public_key() -> str | None:
@@ -104,11 +107,13 @@ class AuthInterceptor(grpc.ServerInterceptor):
 
         payload = verify_token(token)
         if payload is None:
+
             def _deny(request, context):
                 context.abort(
                     grpc.StatusCode.UNAUTHENTICATED,
                     "Missing or invalid authentication token.",
                 )
+
             return grpc.unary_unary_rpc_method_handler(_deny)
 
         return continuation(handler_call_details)

@@ -4,12 +4,12 @@ CommandService implementation.
 Vulnerabilities:
   [VULN-7] Command Injection — user input passed directly to subprocess shell
 """
-import subprocess
 
-import grpc
+import subprocess
 
 import generated.command_pb2 as command_pb2
 import generated.command_pb2_grpc as command_pb2_grpc
+import grpc
 
 
 def _run(cmd: str) -> tuple[str, int]:
@@ -17,7 +17,7 @@ def _run(cmd: str) -> tuple[str, int]:
     try:
         result = subprocess.run(
             cmd,
-            shell=True,          # VULNERABILITY: shell=True enables injection
+            shell=True,  # VULNERABILITY: shell=True enables injection
             capture_output=True,
             text=True,
             timeout=10,

@@ -5,14 +5,14 @@ Vulnerabilities:
   [VULN-6] Path Traversal — filename is joined with base dir but never normalized
   [VULN-6] resolved_path field leaks the full server-side path to the client
 """
+
 import os
-
-import grpc
-
-from server.config import FILE_BASE_DIR, SECRET_FILE_DIR
 
 import generated.file_pb2 as file_pb2
 import generated.file_pb2_grpc as file_pb2_grpc
+import grpc
+
+from server.config import FILE_BASE_DIR, SECRET_FILE_DIR
 
 
 class FileServiceServicer(file_pb2_grpc.FileServiceServicer):

@@ -13,6 +13,7 @@ playbooks off the resulting dashboards.
 This module has no third-party dependencies — it renders the text
 format that Prometheus scrapes directly.
 """
+
 from __future__ import annotations
 
 import threading
@@ -73,11 +74,11 @@ class MetricsInterceptor(grpc.ServerInterceptor):
     def snapshot(self) -> dict:
         with self._lock:
             return {
-                "calls":   dict(self._calls),
-                "errors":  dict(self._errors),
+                "calls": dict(self._calls),
+                "errors": dict(self._errors),
                 "lat_sum": dict(self._latency_ms_sum),
                 "lat_cnt": dict(self._latency_ms_count),
-                "uptime":  time.time() - self.started_at,
+                "uptime": time.time() - self.started_at,
             }
 
     def render_prometheus(self) -> str:
@@ -108,6 +109,7 @@ class MetricsInterceptor(grpc.ServerInterceptor):
 
 def start_metrics_http_server(interceptor: MetricsInterceptor, port: int) -> ThreadingHTTPServer:
     """Serve /metrics and /healthz on a separate HTTP port."""
+
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args, **kwargs):  # silence access log
             pass

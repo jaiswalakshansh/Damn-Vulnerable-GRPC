@@ -6,28 +6,27 @@ Vulnerabilities:
   [VULN-4]  JWT Algorithm Confusion — public key exposed via GetPublicKey
   [VULN-10] Hardcoded credentials — admin:admin123 in config.py
 """
+
 import datetime
 
 import bcrypt
-import grpc
-import jwt as pyjwt
-
-from server.config import JWT_SECRET, RSA_PRIVATE_KEY_PATH, RSA_PUBLIC_KEY_PATH, FLAGS
-from server.database import get_db
-from server.interceptors.auth_interceptor import verify_token
 
 # These are imported after proto generation in main.py and injected here
 import generated.auth_pb2 as auth_pb2
 import generated.auth_pb2_grpc as auth_pb2_grpc
+import grpc
+import jwt as pyjwt
+
+from server.config import FLAGS, JWT_SECRET, RSA_PRIVATE_KEY_PATH, RSA_PUBLIC_KEY_PATH
+from server.database import get_db
+from server.interceptors.auth_interceptor import verify_token
 
 
 class AuthServiceServicer(auth_pb2_grpc.AuthServiceServicer):
 
     def Login(self, request, context):
         if not request.username or not request.password:
-            return auth_pb2.LoginResponse(
-                success=False, message="Username and password are required."
-            )
+            return auth_pb2.LoginResponse(success=False, message="Username and password are required.")
 
         conn = get_db()
         try:
@@ -40,16 +39,14 @@ class AuthServiceServicer(auth_pb2_grpc.AuthServiceServicer):
         finally:
             conn.close()
 
-        if user is None or not bcrypt.checkpw(
-            request.password.encode(), user["password"].encode()
-        ):
+        if user is None or not bcrypt.checkpw(request.password.encode(), user["password"].encode()):
             return auth_pb2.LoginResponse(success=False, message="Invalid credentials.")
 
         payload = {
-            "user_id":  user["id"],
+            "user_id": user["id"],
             "username": user["username"],
-            "role":     user["role"],
-            "exp":      datetime.datetime.utcnow() + datetime.timedelta(hours=24),
+            "role": user["role"],
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24),
         }
         token = pyjwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
@@ -62,9 +59,7 @@ class AuthServiceServicer(auth_pb2_grpc.AuthServiceServicer):
 
     def Register(self, request, context):
         if not request.username or not request.password:
-            return auth_pb2.RegisterResponse(
-                success=False, message="Username and password are required."
-            )
+            return auth_pb2.RegisterResponse(success=False, message="Username and password are required.")
 
         # VULNERABILITY [VULN-8]: Mass Assignment
         # The 'role' field is taken directly from the client request.

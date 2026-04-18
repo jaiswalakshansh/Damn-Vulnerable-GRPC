@@ -5,18 +5,18 @@ Vulnerabilities:
   [VULN-2] Missing authentication — all RPCs are publicly accessible
   [VULN-2] Information disclosure — GetSystemInfo leaks JWT secret and DB path
 """
+
 import os
 import platform
 import sqlite3
 import sys
 
-import grpc
-
-from server.config import FLAGS, JWT_SECRET, DB_PATH
-from server.database import get_db
-
 import generated.admin_pb2 as admin_pb2
 import generated.admin_pb2_grpc as admin_pb2_grpc
+import grpc
+
+from server.config import DB_PATH, FLAGS, JWT_SECRET
+from server.database import get_db
 
 
 class AdminServiceServicer(admin_pb2_grpc.AdminServiceServicer):

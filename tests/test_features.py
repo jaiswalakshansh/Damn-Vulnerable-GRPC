@@ -8,12 +8,11 @@ Feature tests — exercise the *non-vulnerability* pieces of DVGRPC:
 - env overrides (DVGRPC_ROOT, DVGRPC_PORT) take effect
 - every exploit script imports cleanly (catches broken sys.path/refactors)
 """
+
 from __future__ import annotations
 
 import http.client
-import importlib
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -30,7 +29,8 @@ def test_scoreboard_json_mode(tmp_path, monkeypatch):
     monkeypatch.setenv("DVGRPC_PROGRESS_FILE", str(progress))
     out = subprocess.check_output(
         [sys.executable, str(REPO / "scripts/scoreboard.py"), "--json"],
-        text=True, timeout=10,
+        text=True,
+        timeout=10,
     )
     data = json.loads(out)
     assert "solved" in data and isinstance(data["solved"], dict)
@@ -53,6 +53,7 @@ def test_scoreboard_catalogue_matches_flags():
     sys.path.insert(0, str(REPO))
     from scripts.scoreboard import CHALLENGES
     from server.config import FLAGS
+
     scoreboard_keys = {c.key for c in CHALLENGES}
     missing = set(FLAGS) - scoreboard_keys
     assert not missing, f"Flags not in scoreboard: {missing}"
@@ -62,18 +63,27 @@ def test_scoreboard_catalogue_matches_flags():
 def test_healthcheck_fails_when_server_down(tmp_path):
     """Healthcheck exits non-zero when nothing is listening."""
     r = subprocess.run(
-        [sys.executable, str(REPO / "scripts/healthcheck.py"),
-         "--host", "127.0.0.1:1", "--timeout", "0.5"],
-        capture_output=True, text=True, timeout=10,
+        [sys.executable, str(REPO / "scripts/healthcheck.py"), "--host", "127.0.0.1:1", "--timeout", "0.5"],
+        capture_output=True,
+        text=True,
+        timeout=10,
     )
     assert r.returncode != 0
 
 
 def test_healthcheck_passes_against_fixture(channel, server_port):
     r = subprocess.run(
-        [sys.executable, str(REPO / "scripts/healthcheck.py"),
-         "--host", f"127.0.0.1:{server_port}", "--timeout", "3"],
-        capture_output=True, text=True, timeout=15,
+        [
+            sys.executable,
+            str(REPO / "scripts/healthcheck.py"),
+            "--host",
+            f"127.0.0.1:{server_port}",
+            "--timeout",
+            "3",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=15,
     )
     assert r.returncode == 0, r.stdout + r.stderr
     assert "ok" in r.stdout
@@ -82,41 +92,68 @@ def test_healthcheck_passes_against_fixture(channel, server_port):
 # -------------------- selfcheck --------------------
 def test_selfcheck_reports_all_challenges(channel, server_port):
     r = subprocess.run(
-        [sys.executable, str(REPO / "scripts/selfcheck.py"),
-         "--host", f"127.0.0.1:{server_port}", "--json"],
-        capture_output=True, text=True, timeout=60,
+        [sys.executable, str(REPO / "scripts/selfcheck.py"), "--host", f"127.0.0.1:{server_port}", "--json"],
+        capture_output=True,
+        text=True,
+        timeout=60,
     )
-    # Extract the JSON payload (the script prints both a table and JSON)
-    tail = r.stdout.rsplit("}", 1)[0].split("{", 1)
-    assert tail  # guard
-    blob = "{" + tail[1] + "}"
-    data = json.loads(blob)
+    # --json mode emits a single clean JSON document to stdout.
+    data = json.loads(r.stdout)
+    for key, result in data.items():
+        assert "ok" in result and "detail" in result, key
     assert set(data) >= {
-        "reflection", "unauthenticated_admin", "sql_injection",
-        "idor", "hardcoded_creds", "mass_assignment",
-        "metadata_bypass", "integer_overflow",
+        "reflection",
+        "unauthenticated_admin",
+        "sql_injection",
+        "idor",
+        "hardcoded_creds",
+        "mass_assignment",
+        "metadata_bypass",
+        "integer_overflow",
     }
 
 
 # -------------------- env overrides --------------------
-def test_env_overrides_paths(monkeypatch, tmp_path):
-    """Setting DVGRPC_ROOT must redirect every derived path."""
-    monkeypatch.setenv("DVGRPC_ROOT", str(tmp_path))
-    # Force a fresh import of the config module
-    for m in [k for k in list(sys.modules) if k.startswith("server.config")]:
-        del sys.modules[m]
-    sys.path.insert(0, str(REPO))
-    import server.config as cfg
-    importlib.reload(cfg)
-    assert cfg.DVGRPC_ROOT == tmp_path.resolve()
-    assert str(tmp_path) in cfg.DB_PATH
-    assert str(tmp_path) in cfg.FILE_BASE_DIR
-    assert str(tmp_path) in cfg.SECRET_FILE_DIR
+def test_env_overrides_paths(tmp_path):
+    """Setting DVGRPC_ROOT must redirect every derived path.
+
+    Runs in a subprocess with a clean interpreter so the already-loaded
+    server.config module in the test session doesn't mask the override.
+    Strips any overriding path envs that a parallel fixture may have set.
+    """
+    import os as _os
+
+    stripped = {
+        k: v
+        for k, v in _os.environ.items()
+        if k
+        not in {
+            "DB_PATH",
+            "DVGRPC_UPLOADS",
+            "DVGRPC_SECRETS",
+            "DVGRPC_PRIV_KEY",
+            "DVGRPC_PUB_KEY",
+        }
+    }
+    env = {**stripped, "DVGRPC_ROOT": str(tmp_path), "PYTHONPATH": str(REPO)}
+    code = (
+        "import json, server.config as c; "
+        "print(json.dumps({"
+        "'root': str(c.DVGRPC_ROOT), 'db': c.DB_PATH, "
+        "'uploads': c.FILE_BASE_DIR, 'secret': c.SECRET_FILE_DIR}))"
+    )
+    r = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=15)
+    assert r.returncode == 0, r.stderr
+    data = json.loads(r.stdout)
+    assert data["root"] == str(tmp_path.resolve())
+    for k in ("db", "uploads", "secret"):
+        assert str(tmp_path) in data[k], (k, data[k])
 
 
 # -------------------- metrics interceptor --------------------
 def test_metrics_interceptor_counts_and_renders():
     from server.interceptors.metrics_interceptor import MetricsInterceptor
+
     m = MetricsInterceptor()
     # Simulate 3 calls + 1 error
     with m._lock:
@@ -135,9 +172,12 @@ def test_metrics_interceptor_counts_and_renders():
 def test_metrics_http_server_serves_metrics(tmp_path):
     """Start a real HTTP metrics sidecar on a free port and scrape it."""
     import socket
+
     from server.interceptors.metrics_interceptor import (
-        MetricsInterceptor, start_metrics_http_server,
+        MetricsInterceptor,
+        start_metrics_http_server,
     )
+
     with socket.socket() as s:
         s.bind(("", 0))
         port = s.getsockname()[1]
@@ -167,7 +207,8 @@ def test_metrics_http_server_serves_metrics(tmp_path):
 def test_exploit_script_compiles(exploit: Path):
     # Compile-only test; actually invoking main() would attack the fixture.
     subprocess.check_call(
-        [sys.executable, "-m", "py_compile", str(exploit)], timeout=10,
+        [sys.executable, "-m", "py_compile", str(exploit)],
+        timeout=10,
     )
 
 
@@ -186,6 +227,15 @@ def test_every_exploit_has_a_matching_challenge_dir():
 def test_makefile_help_lists_key_targets():
     r = subprocess.run(["make", "-s", "help"], cwd=REPO, capture_output=True, text=True, timeout=10)
     assert r.returncode == 0, r.stderr
-    for target in ("run", "up", "down", "test", "proto", "scoreboard",
-                   "selfcheck", "solve-all", "healthcheck"):
+    for target in (
+        "run",
+        "up",
+        "down",
+        "test",
+        "proto",
+        "scoreboard",
+        "selfcheck",
+        "solve-all",
+        "healthcheck",
+    ):
         assert target in r.stdout, f"missing target: {target}"

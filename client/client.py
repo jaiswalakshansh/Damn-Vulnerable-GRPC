@@ -47,6 +47,7 @@ def get_metadata(token: str | None = None, internal: bool = False) -> list[tuple
 def login(username: str, password: str) -> str | None:
     """Login and return JWT token."""
     from generated import auth_pb2, auth_pb2_grpc
+
     channel = get_channel()
     stub = auth_pb2_grpc.AuthServiceStub(channel)
     try:

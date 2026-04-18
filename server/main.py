@@ -4,6 +4,7 @@ DVGRPC — Damn Vulnerable gRPC Server
 Starts all services on a single insecure (no TLS) port.
 Server reflection is enabled — this is intentional (Challenge 1).
 """
+
 import logging
 import os
 import subprocess
@@ -16,9 +17,13 @@ import grpc
 from grpc_reflection.v1alpha import reflection
 
 from server.config import (
-    SERVER_HOST, SERVER_PORT,
-    RSA_PRIVATE_KEY_PATH, RSA_PUBLIC_KEY_PATH,
-    FILE_BASE_DIR, SECRET_FILE_DIR, FLAGS,
+    FILE_BASE_DIR,
+    FLAGS,
+    RSA_PRIVATE_KEY_PATH,
+    RSA_PUBLIC_KEY_PATH,
+    SECRET_FILE_DIR,
+    SERVER_HOST,
+    SERVER_PORT,
 )
 from server.database import init_db
 from server.interceptors.auth_interceptor import AuthInterceptor
@@ -33,7 +38,7 @@ log = logging.getLogger("dvgrpc.main")
 # or at the repo root when running locally.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 PROTO_DIR = Path(os.getenv("DVGRPC_PROTO_DIR", _REPO_ROOT / "proto"))
-GEN_DIR   = Path(os.getenv("DVGRPC_GEN_DIR",   _REPO_ROOT / "generated"))
+GEN_DIR = Path(os.getenv("DVGRPC_GEN_DIR", _REPO_ROOT / "generated"))
 if str(GEN_DIR.parent) not in sys.path:
     sys.path.insert(0, str(GEN_DIR.parent))
 
@@ -41,6 +46,7 @@ if str(GEN_DIR.parent) not in sys.path:
 # ---------------------------------------------------------------------------
 # Proto generation
 # ---------------------------------------------------------------------------
+
 
 def generate_protos() -> None:
     """Compile .proto files into Python stubs if not already done."""
@@ -54,7 +60,9 @@ def generate_protos() -> None:
 
     log.info("Generating gRPC stubs from %d proto files…", len(proto_files))
     cmd = [
-        sys.executable, "-m", "grpc_tools.protoc",
+        sys.executable,
+        "-m",
+        "grpc_tools.protoc",
         f"--proto_path={PROTO_DIR}",
         f"--python_out={GEN_DIR}",
         f"--grpc_python_out={GEN_DIR}",
@@ -85,6 +93,7 @@ def generate_protos() -> None:
 # Key generation
 # ---------------------------------------------------------------------------
 
+
 def generate_rsa_keys() -> None:
     """Generate RSA key pair for JWT RS256 support if not already present."""
     key_dir = Path(RSA_PRIVATE_KEY_PATH).parent
@@ -95,8 +104,8 @@ def generate_rsa_keys() -> None:
 
     log.info("Generating RSA key pair…")
     try:
-        from cryptography.hazmat.primitives.asymmetric import rsa
         from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
 
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         private_pem = private_key.private_bytes(
@@ -119,6 +128,7 @@ def generate_rsa_keys() -> None:
 # Flag files
 # ---------------------------------------------------------------------------
 
+
 def create_flag_files() -> None:
     """Write flag files used by path traversal and command injection challenges."""
     os.makedirs(SECRET_FILE_DIR, exist_ok=True)
@@ -127,28 +137,24 @@ def create_flag_files() -> None:
     # Path traversal flag
     path_flag_file = Path(SECRET_FILE_DIR) / "path_flag.txt"
     path_flag_file.write_text(
-        f"{FLAGS['path_traversal']}\n"
-        "Congratulations! You exploited a path traversal vulnerability.\n"
+        f"{FLAGS['path_traversal']}\n" "Congratulations! You exploited a path traversal vulnerability.\n"
     )
 
     # Command injection flag
     cmd_flag_file = Path(SECRET_FILE_DIR) / "cmd_flag.txt"
     cmd_flag_file.write_text(
-        f"{FLAGS['command_injection']}\n"
-        "Congratulations! You exploited OS command injection via gRPC.\n"
+        f"{FLAGS['command_injection']}\n" "Congratulations! You exploited OS command injection via gRPC.\n"
     )
 
     # Metadata bypass flag file (accessible after bypassing auth)
     meta_flag_file = Path(SECRET_FILE_DIR) / "meta_flag.txt"
     meta_flag_file.write_text(
-        f"{FLAGS['metadata_bypass']}\n"
-        "Congratulations! You used the internal service bypass header.\n"
+        f"{FLAGS['metadata_bypass']}\n" "Congratulations! You used the internal service bypass header.\n"
     )
 
     # Sample files in the uploads directory
     (Path(FILE_BASE_DIR) / "readme.txt").write_text(
-        "Welcome to DVGRPC file storage.\n"
-        "Available files: readme.txt, sample.json\n"
+        "Welcome to DVGRPC file storage.\n" "Available files: readme.txt, sample.json\n"
     )
     (Path(FILE_BASE_DIR) / "sample.json").write_text(
         '{"message": "This is a public file. Try reading other paths..."}\n'
@@ -161,33 +167,34 @@ def create_flag_files() -> None:
 # Server startup
 # ---------------------------------------------------------------------------
 
+
 def serve() -> None:
     generate_rsa_keys()
     generate_protos()
 
     # Import generated modules + servicers AFTER proto generation
-    import generated.auth_pb2 as auth_pb2
-    import generated.auth_pb2_grpc as auth_pb2_grpc
-    import generated.user_pb2 as user_pb2
-    import generated.user_pb2_grpc as user_pb2_grpc
     import generated.admin_pb2 as admin_pb2
     import generated.admin_pb2_grpc as admin_pb2_grpc
-    import generated.product_pb2 as product_pb2
-    import generated.product_pb2_grpc as product_pb2_grpc
-    import generated.file_pb2 as file_pb2
-    import generated.file_pb2_grpc as file_pb2_grpc
+    import generated.auth_pb2 as auth_pb2
+    import generated.auth_pb2_grpc as auth_pb2_grpc
     import generated.command_pb2 as command_pb2
     import generated.command_pb2_grpc as command_pb2_grpc
     import generated.crypto_pb2 as crypto_pb2
     import generated.crypto_pb2_grpc as crypto_pb2_grpc
+    import generated.file_pb2 as file_pb2
+    import generated.file_pb2_grpc as file_pb2_grpc
+    import generated.product_pb2 as product_pb2
+    import generated.product_pb2_grpc as product_pb2_grpc
+    import generated.user_pb2 as user_pb2
+    import generated.user_pb2_grpc as user_pb2_grpc
 
-    from server.services.auth_service import AuthServiceServicer
-    from server.services.user_service import UserServiceServicer
     from server.services.admin_service import AdminServiceServicer
-    from server.services.product_service import ProductServiceServicer
-    from server.services.file_service import FileServiceServicer
+    from server.services.auth_service import AuthServiceServicer
     from server.services.command_service import CommandServiceServicer
     from server.services.crypto_service import CryptoServiceServicer
+    from server.services.file_service import FileServiceServicer
+    from server.services.product_service import ProductServiceServicer
+    from server.services.user_service import UserServiceServicer
 
     init_db()
     create_flag_files()
@@ -200,8 +207,10 @@ def serve() -> None:
     metrics = None
     if metrics_port:
         from server.interceptors.metrics_interceptor import (
-            MetricsInterceptor, start_metrics_http_server,
+            MetricsInterceptor,
+            start_metrics_http_server,
         )
+
         metrics = MetricsInterceptor()
         interceptors.append(metrics)
         start_metrics_http_server(metrics, metrics_port)

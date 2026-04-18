@@ -58,12 +58,18 @@ extend-exclude = ["generated", ".venv", ".dvgrpc"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM"]
-# Exploit scripts intentionally use insecure patterns for teaching — ignore a few noisy rules.
-ignore = ["E501", "B904"]
+# Exploit scripts and intentionally-vulnerable services use insecure
+# patterns for teaching — suppress the rules that would fight the lesson.
+ignore = ["E501", "E731", "B904", "B905", "SIM105", "SIM102", "UP031", "UP015"]
 
 [tool.ruff.lint.per-file-ignores]
-"client/exploits/*" = ["S", "E", "F841"]  # demo code: unused vars are fine
-"challenges/**/*"    = ["ALL"]
+# Teaching artefacts: we deliberately import things for side effects, use
+# f-strings without placeholders, shadow names, etc.
+"client/exploits/*" = ["F401", "F541", "F811", "F823", "F841", "E402", "I001", "SIM"]
+"challenges/**/*"    = ["E", "F", "W", "I", "B", "UP", "SIM"]
+"server/services/*"  = ["F401", "F841", "SIM"]
+"server/interceptors/*" = ["SIM"]
+"tests/conftest.py"  = ["E402", "F401"]
 
 [tool.black]
 line-length = 110
