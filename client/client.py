@@ -15,16 +15,20 @@ Or use grpcurl directly:
     localhost:50051 dvgrpc.AuthService/Login
 """
 
+import os
 import sys
-import json
+from pathlib import Path
+
 import grpc
 
 # Add project root to path so we can import generated stubs
-sys.path.insert(0, "/app")  # inside Docker
-sys.path.insert(0, ".")     # local development
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT))
+if Path("/app").exists():
+    sys.path.insert(0, "/app")  # inside Docker
 
-HOST = "localhost"
-PORT = 50051
+HOST = os.getenv("DVGRPC_HOST", "localhost")
+PORT = int(os.getenv("DVGRPC_PORT", "50051"))
 
 
 def get_channel() -> grpc.Channel:

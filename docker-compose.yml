@@ -1,18 +1,20 @@
-version: "3.9"
-
+# docker compose V2 format — no top-level `version` key needed.
 services:
   dvgrpc:
     build: .
+    image: dvgrpc:latest
     container_name: dvgrpc
     ports:
-      - "50051:50051"
+      - "${DVGRPC_PORT:-50051}:50051"
     volumes:
       # Persist database and keys across restarts
       - dvgrpc_data:/app/data
       - dvgrpc_keys:/app/keys
     environment:
       - PORT=50051
+      - DVGRPC_ROOT=/app
       - DB_PATH=/app/data/dvgrpc.db
+      - DVGRPC_LOG_LEVEL=${DVGRPC_LOG_LEVEL:-INFO}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c",
@@ -20,6 +22,12 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
+    # Keep the container isolated from the host network to reduce accidental exposure.
+    # Add `network_mode: bridge` or a dedicated network only if you understand the risks.
+    labels:
+      - "org.opencontainers.image.title=Damn Vulnerable gRPC"
+      - "dvgrpc.warning=Do NOT expose to the public internet."
 
 volumes:
   dvgrpc_data:

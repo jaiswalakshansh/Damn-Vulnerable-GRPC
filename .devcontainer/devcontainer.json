@@ -1,0 +1,41 @@
+{
+  "name": "DVGRPC — Damn Vulnerable gRPC",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/go:1": { "version": "1.22" }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [50051],
+  "portsAttributes": {
+    "50051": {
+      "label": "DVGRPC server",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        "zxh404.vscode-proto3",
+        "ms-azuretools.vscode-docker",
+        "GitHub.vscode-github-actions"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.testing.pytestEnabled": true,
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        }
+      }
+    }
+  },
+  "remoteEnv": {
+    "DVGRPC_ROOT": "${containerWorkspaceFolder}/.dvgrpc",
+    "DVGRPC_HOST_PORT": "localhost:50051"
+  },
+  "runArgs": ["--network=bridge"]
+}

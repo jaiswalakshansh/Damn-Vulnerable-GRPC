@@ -24,13 +24,18 @@ from server.database import init_db
 from server.interceptors.auth_interceptor import AuthInterceptor
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=os.getenv("DVGRPC_LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 log = logging.getLogger("dvgrpc.main")
 
-PROTO_DIR = Path("/app/proto")
-GEN_DIR = Path("/app/generated")
+# Proto/generated live next to the server tree in Docker (/app/proto, /app/generated)
+# or at the repo root when running locally.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+PROTO_DIR = Path(os.getenv("DVGRPC_PROTO_DIR", _REPO_ROOT / "proto"))
+GEN_DIR   = Path(os.getenv("DVGRPC_GEN_DIR",   _REPO_ROOT / "generated"))
+if str(GEN_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(GEN_DIR.parent))
 
 
 # ---------------------------------------------------------------------------

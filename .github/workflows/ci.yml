@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "claude/**" ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dev deps
+        run: pip install -r requirements-dev.txt
+      - name: Ruff
+        run: ruff check server/ client/ tests/ scripts/
+      - name: Black (check)
+        run: black --check server/ client/ tests/ scripts/
+
+  proto:
+    name: Proto compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Compile .proto files
+        run: |
+          mkdir -p generated && touch generated/__init__.py
+          python -m grpc_tools.protoc --proto_path=proto \
+            --python_out=generated --grpc_python_out=generated proto/*.proto
+      - name: Sanity import check
+        run: |
+          python -c "import sys; sys.path.insert(0, '.'); \
+            from generated import auth_pb2, auth_pb2_grpc, user_pb2, admin_pb2; \
+            print('OK')"
+
+  tests:
+    name: Integration tests — Python ${{ matrix.python-version }}
+    needs: proto
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Generate stubs
+        run: make proto
+      - name: Run tests
+        env:
+          DVGRPC_ROOT: ${{ github.workspace }}/.dvgrpc
+        run: pytest -v --timeout=30 tests/
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: dvgrpc:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test — server reflection reachable
+        run: |
+          docker run -d --name dvgrpc -p 50051:50051 dvgrpc:ci
+          sleep 8
+          docker logs dvgrpc
+          # Install grpcurl and confirm reflection is serving
+          curl -sSL -o grpcurl.tgz \
+            https://github.com/fullstorydev/grpcurl/releases/download/v1.9.1/grpcurl_1.9.1_linux_x86_64.tar.gz
+          tar -xzf grpcurl.tgz grpcurl
+          ./grpcurl -plaintext localhost:50051 list
+          docker rm -f dvgrpc
