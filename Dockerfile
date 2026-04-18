@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 LABEL org.opencontainers.image.title="Damn Vulnerable gRPC"
 LABEL org.opencontainers.image.description="Intentionally insecure gRPC server for CTF training and security research"
