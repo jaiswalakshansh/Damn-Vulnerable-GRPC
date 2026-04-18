@@ -1,4 +1,4 @@
-grpcio==1.62.1
+grpcio==1.80.0
 grpcio-tools==1.62.1
 grpcio-reflection==1.62.1
 PyJWT==2.8.0
