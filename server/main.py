@@ -24,13 +24,18 @@ from server.database import init_db
 from server.interceptors.auth_interceptor import AuthInterceptor
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=os.getenv("DVGRPC_LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 log = logging.getLogger("dvgrpc.main")
 
-PROTO_DIR = Path("/app/proto")
-GEN_DIR = Path("/app/generated")
+# Proto/generated live next to the server tree in Docker (/app/proto, /app/generated)
+# or at the repo root when running locally.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+PROTO_DIR = Path(os.getenv("DVGRPC_PROTO_DIR", _REPO_ROOT / "proto"))
+GEN_DIR   = Path(os.getenv("DVGRPC_GEN_DIR",   _REPO_ROOT / "generated"))
+if str(GEN_DIR.parent) not in sys.path:
+    sys.path.insert(0, str(GEN_DIR.parent))
 
 
 # ---------------------------------------------------------------------------
@@ -188,9 +193,23 @@ def serve() -> None:
     create_flag_files()
 
     interceptor = AuthInterceptor()
+    interceptors = [interceptor]
+
+    # Opt-in metrics. Set DVGRPC_METRICS_PORT=9090 to enable.
+    metrics_port = int(os.getenv("DVGRPC_METRICS_PORT", "0"))
+    metrics = None
+    if metrics_port:
+        from server.interceptors.metrics_interceptor import (
+            MetricsInterceptor, start_metrics_http_server,
+        )
+        metrics = MetricsInterceptor()
+        interceptors.append(metrics)
+        start_metrics_http_server(metrics, metrics_port)
+        log.info("Metrics sidecar listening on :%d/metrics", metrics_port)
+
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=10),
-        interceptors=[interceptor],
+        interceptors=interceptors,
     )
 
     # Register all services

@@ -1,6 +1,6 @@
 # DVGRPC Challenges
 
-10 main challenges + 2 bonus crypto challenges, covering the most common gRPC security vulnerabilities.
+13 main challenges + 2 bonus crypto challenges, covering the most common gRPC security vulnerabilities plus real-world CVE-inspired additions.
 
 ## Difficulty Scale
 
@@ -24,6 +24,9 @@
 | 08 | [Mass Assignment](08-mass-assignment/) | Security Misconfiguration | 🟡 | `FLAG{m4ss_4ss1gnm3nt_r0l3_3sc4l4t10n}` |
 | 09 | [Metadata Bypass](09-metadata-bypass/) | Broken Authentication | 🟡 | `FLAG{m3t4d4t4_byp4ss_l1k3_4_pr0}` |
 | 10 | [Hardcoded Credentials](10-hardcoded-credentials/) | Security Misconfiguration | 🟢 | `FLAG{h4rdc0d3d_s3cr3ts_4r3_b4d_pr4ct1c3}` |
+| 11 | [Timing Attack](11-timing-attack/) | Information Disclosure | 🔴 | `FLAG{t1m1ng_4tt4ck_us3r_3num3r4t10n}` |
+| 12 | [Streaming DoS](12-streaming-dos/) | Availability | 🟡 | `FLAG{unb0und3d_str34m_3xh4usts_th3_s3rv3r}` |
+| 13 | [Integer Overflow](13-integer-overflow/) | Injection / BAC | 🟡 | `FLAG{int3g3r_b0unds_n0t_v4l1d4t3d}` |
 | B1 | [Weak Crypto (ECB)](bonus-crypto/) | Cryptographic Failures | 🔴 | `FLAG{3cb_m0d3_l3aks_p4tt3rns_b4d}` |
 | B2 | [HMAC Forgery](bonus-crypto/) | Cryptographic Failures | 🔴 | `FLAG{s1gn4tur3_f0rg3d_w34k_hmac}` |
 

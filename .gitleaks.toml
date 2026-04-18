@@ -1,0 +1,33 @@
+# gitleaks configuration for DVGRPC.
+#
+# This project intentionally ships with weak credentials. The allowlist
+# below silences alerts about *those specific* values. Any NEW secret that
+# shows up in a diff should still raise noise — that's the point.
+
+title = "DVGRPC gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Intentionally-weak DVGRPC training credentials"
+regexes = [
+    '''supersecretkey123''',
+    '''admin123''',
+    '''alice123''',
+    '''b0bpassw0rd''',
+    '''charlie_pass''',
+    '''dave1234''',
+    '''dvgrpc-internal-v1''',
+    '''1234567890abcdef''',
+    '''dvgrpc_secret_1337''',
+]
+paths = [
+    '''(?i)challenges/.*''',
+    '''(?i)docs/SOLUTIONS\.md''',
+    '''(?i)server/config\.py''',
+    '''(?i)server/database\.py''',
+    '''(?i)client/exploits/.*''',
+    '''(?i)tests/.*''',
+    '''(?i)scripts/scoreboard\.py''',
+]
