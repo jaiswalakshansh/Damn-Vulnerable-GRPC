@@ -5,12 +5,12 @@ Vulnerabilities:
   [VULN-3] SQL Injection — search query uses string formatting, not parameterization
   [VULN-3] debug_query field leaks the raw SQL to the client
 """
-import grpc
-
-from server.database import get_db
 
 import generated.product_pb2 as product_pb2
 import generated.product_pb2_grpc as product_pb2_grpc
+import grpc
+
+from server.database import get_db
 
 
 class ProductServiceServicer(product_pb2_grpc.ProductServiceServicer):
@@ -123,9 +123,9 @@ class ProductServiceServicer(product_pb2_grpc.ProductServiceServicer):
 
         Flag: FLAG{int3g3r_b0unds_n0t_v4l1d4t3d}
         """
-        q        = request.query or ""
-        page     = request.page               # NOT validated
-        per_page = request.per_page if request.per_page else 5   # default
+        q = request.query or ""
+        page = request.page  # NOT validated
+        per_page = request.per_page if request.per_page else 5  # default
 
         # VULNERABILITY: no bounds check; negative per_page → LIMIT -1 → dump all
         offset = page * per_page
@@ -179,6 +179,4 @@ class ProductServiceServicer(product_pb2_grpc.ProductServiceServicer):
         finally:
             conn.close()
 
-        return product_pb2.AddProductResponse(
-            success=True, product_id=product_id, message="Product added."
-        )
+        return product_pb2.AddProductResponse(success=True, product_id=product_id, message="Product added.")

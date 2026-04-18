@@ -8,6 +8,7 @@ nonzero otherwise.  Intended for use by Docker HEALTHCHECK, CI, and humans.
   python scripts/healthcheck.py
   python scripts/healthcheck.py --host localhost:50051 --timeout 3
 """
+
 from __future__ import annotations
 
 import argparse
@@ -38,6 +39,7 @@ def main() -> int:
         from grpc_reflection.v1alpha.proto_reflection_descriptor_database import (
             ProtoReflectionDescriptorDatabase,
         )
+
         services = ProtoReflectionDescriptorDatabase(ch).get_services()
     except Exception as exc:  # reflection not enabled / disabled
         print(f"channel ready, reflection off: {exc}")

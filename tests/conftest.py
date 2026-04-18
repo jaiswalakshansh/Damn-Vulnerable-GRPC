@@ -6,6 +6,7 @@ exercise each intentional vulnerability end-to-end. They guard against
 regressions: if a refactor accidentally PATCHES a challenge, CI will fail
 loudly, because the CTF flags stop being reachable.
 """
+
 from __future__ import annotations
 
 import os
@@ -40,7 +41,9 @@ def _compile_protos() -> None:
     assert proto_files, "no .proto files found"
 
     cmd = [
-        sys.executable, "-m", "grpc_tools.protoc",
+        sys.executable,
+        "-m",
+        "grpc_tools.protoc",
         f"--proto_path={REPO_ROOT / 'proto'}",
         f"--python_out={GEN_DIR}",
         f"--grpc_python_out={GEN_DIR}",
@@ -50,6 +53,7 @@ def _compile_protos() -> None:
 
     # Fix relative imports inside generated _pb2_grpc files
     import re
+
     for grpc_file in GEN_DIR.glob("*_pb2_grpc.py"):
         t = grpc_file.read_text()
         t = re.sub(r"^import (\w+_pb2)", r"from generated import \1", t, flags=re.M)
@@ -87,18 +91,24 @@ def grpc_server(server_port: int, runtime_root: Path):
     os.environ["DB_PATH"] = str(runtime_root / "data" / "dvgrpc.db")
 
     # Import after env is set so config.py picks up the overrides
-    from server.main import create_flag_files, generate_rsa_keys  # noqa: WPS433
     from server.database import init_db
     from server.interceptors.auth_interceptor import AuthInterceptor
+    from server.main import create_flag_files, generate_rsa_keys  # noqa: WPS433
 
     generate_rsa_keys()
     init_db()
     create_flag_files()
 
     from generated import (
-        admin_pb2_grpc, auth_pb2_grpc, command_pb2_grpc, crypto_pb2_grpc,
-        file_pb2_grpc, product_pb2_grpc, user_pb2_grpc,
+        admin_pb2_grpc,
+        auth_pb2_grpc,
+        command_pb2_grpc,
+        crypto_pb2_grpc,
+        file_pb2_grpc,
+        product_pb2_grpc,
+        user_pb2_grpc,
     )
+
     from server.services.admin_service import AdminServiceServicer
     from server.services.auth_service import AuthServiceServicer
     from server.services.command_service import CommandServiceServicer

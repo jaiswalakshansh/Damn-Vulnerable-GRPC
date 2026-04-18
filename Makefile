@@ -51,11 +51,7 @@ deps-dev: ## Install dev dependencies (pytest, ruff, black)
 proto: ## Generate Python stubs from .proto files
 	mkdir -p generated && touch generated/__init__.py
 	$(PYTHON) -m grpc_tools.protoc --proto_path=proto --python_out=generated --grpc_python_out=generated proto/*.proto
-	@$(PYTHON) -c "import pathlib, re; \
-for p in pathlib.Path('generated').glob('*_pb2_grpc.py'): \
-    t = p.read_text(); \
-    t = re.sub(r'^import (\\w+_pb2)', r'from generated import \\1', t, flags=re.M); \
-    p.write_text(t)"
+	$(PYTHON) scripts/fix_proto_imports.py generated
 	@echo "  Stubs written to generated/"
 
 .PHONY: run

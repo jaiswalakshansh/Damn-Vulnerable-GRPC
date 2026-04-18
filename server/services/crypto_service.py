@@ -7,18 +7,18 @@ Vulnerabilities:
   [BONUS-3] Padding oracle — error messages distinguish padding vs MAC failures
   [BONUS-4] Weak HMAC — predictable secret prefix, forgeable
 """
+
 import hashlib
 import hmac
 import os
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-
-import grpc
-
-from server.config import CRYPTO_KEY, CRYPTO_IV, HMAC_SECRET_PREFIX, FLAGS
 
 import generated.crypto_pb2 as crypto_pb2
 import generated.crypto_pb2_grpc as crypto_pb2_grpc
+import grpc
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+
+from server.config import CRYPTO_IV, CRYPTO_KEY, FLAGS, HMAC_SECRET_PREFIX
 
 
 class CryptoServiceServicer(crypto_pb2_grpc.CryptoServiceServicer):
@@ -69,36 +69,26 @@ class CryptoServiceServicer(crypto_pb2_grpc.CryptoServiceServicer):
         try:
             ct = bytes.fromhex(request.ciphertext_hex)
         except ValueError:
-            return crypto_pb2.DecryptResponse(
-                success=False, error="Invalid hex encoding."
-            )
+            return crypto_pb2.DecryptResponse(success=False, error="Invalid hex encoding.")
 
         try:
             if algorithm == "AES-ECB":
                 cipher = AES.new(CRYPTO_KEY, AES.MODE_ECB)
                 try:
                     pt = unpad(cipher.decrypt(ct), AES.block_size)
-                    return crypto_pb2.DecryptResponse(
-                        plaintext=pt.decode(errors="replace"), success=True
-                    )
+                    return crypto_pb2.DecryptResponse(plaintext=pt.decode(errors="replace"), success=True)
                 except ValueError:
                     # VULNERABILITY: Distinguishable padding error
-                    return crypto_pb2.DecryptResponse(
-                        success=False, error="Invalid padding."
-                    )
+                    return crypto_pb2.DecryptResponse(success=False, error="Invalid padding.")
             elif algorithm == "AES-CBC":
                 iv = bytes.fromhex(request.iv_hex) if request.iv_hex else CRYPTO_IV
                 cipher = AES.new(CRYPTO_KEY, AES.MODE_CBC, iv=iv)
                 try:
                     pt = unpad(cipher.decrypt(ct), AES.block_size)
-                    return crypto_pb2.DecryptResponse(
-                        plaintext=pt.decode(errors="replace"), success=True
-                    )
+                    return crypto_pb2.DecryptResponse(plaintext=pt.decode(errors="replace"), success=True)
                 except ValueError:
                     # VULNERABILITY: Distinguishable padding error
-                    return crypto_pb2.DecryptResponse(
-                        success=False, error="Invalid padding."
-                    )
+                    return crypto_pb2.DecryptResponse(success=False, error="Invalid padding.")
             else:
                 context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Unsupported algorithm.")
         except Exception as exc:

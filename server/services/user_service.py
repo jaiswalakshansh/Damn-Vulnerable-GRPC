@@ -4,13 +4,13 @@ UserService implementation.
 Vulnerabilities:
   [VULN-5] IDOR — GetProfile and GetNote do not verify ownership
 """
+
+import generated.user_pb2 as user_pb2
+import generated.user_pb2_grpc as user_pb2_grpc
 import grpc
 
 from server.database import get_db
 from server.interceptors.auth_interceptor import verify_token
-
-import generated.user_pb2 as user_pb2
-import generated.user_pb2_grpc as user_pb2_grpc
 
 
 def _get_caller(context) -> dict | None:
@@ -97,10 +97,7 @@ class UserServiceServicer(user_pb2_grpc.UserServiceServicer):
         finally:
             conn.close()
 
-        users = [
-            user_pb2.UserSummary(user_id=r["id"], username=r["username"], role=r["role"])
-            for r in rows
-        ]
+        users = [user_pb2.UserSummary(user_id=r["id"], username=r["username"], role=r["role"]) for r in rows]
         return user_pb2.ListUsersResponse(users=users, total=total)
 
     def GetNote(self, request, context):

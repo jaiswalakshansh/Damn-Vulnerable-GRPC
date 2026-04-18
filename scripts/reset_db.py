@@ -8,10 +8,10 @@ Reset the local DVGRPC SQLite database to its seeded state.
 Useful when a challenge (e.g. SQL injection) has written junk into the db
 or when the schema has changed between commits.
 """
+
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
