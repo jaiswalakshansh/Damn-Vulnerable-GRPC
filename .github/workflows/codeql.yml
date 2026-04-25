@@ -18,7 +18,7 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: python
           # This project is intentionally vulnerable — suppress the obvious
@@ -31,4 +31,4 @@ jobs:
               - "challenges/**"
               - "client/exploits/**"
               - "generated/**"
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
